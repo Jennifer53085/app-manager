@@ -68,7 +68,7 @@ function App(): React.JSX.Element {
   };
   const handleQuery = () => {
     if (ControllerModule) {
-    ControllerModule.findInstalledApps((installedApps) => {
+    ControllerModule.searchApps((installedApps) => {
       console.log(installedApps);
     });
     }

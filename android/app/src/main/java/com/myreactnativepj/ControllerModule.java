@@ -39,48 +39,41 @@ import android.util.Base64;
 
 public class ControllerModule extends ReactContextBaseJavaModule {
 
-    private static final int PERMISSION_REQUEST_CODE = 1; //申請權限
+    private static final int PERMISSION_REQUEST_CODE = 1; // 申請權限
     private Context context = getReactApplicationContext();
     private PackageManager packageManager = context.getPackageManager();
     private PackageInstaller packageInstaller = packageManager.getPackageInstaller();
-    private int sdkVersion = Build.VERSION.SDK_INT;//偵測SDK版本號
+    private int sdkVersion = Build.VERSION.SDK_INT;// 偵測SDK版本號
 
     ControllerModule(ReactApplicationContext context) {
         super(context);
     }
 
-//    private static Bitmap drawableToBitmap(Drawable drawable) {
-//        if (drawable instanceof BitmapDrawable) {
-//            return ((BitmapDrawable) drawable).getBitmap();
-//        } else {
-//            int width = drawable.getIntrinsicWidth();
-//            int height = drawable.getIntrinsicHeight();
-//            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-//            // 将 drawable 繪製 Bitmap 上
-//            Canvas canvas = new Canvas(bitmap);
-//            drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
-//            drawable.draw(canvas);
-//            return bitmap;
-//        }
-//    }
-//
-//    private static String bitmapToBase64(Bitmap bitmap) {
-//        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-//        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
-//        byte[] byteArray = byteArrayOutputStream.toByteArray();
-//        return Base64.encodeToString(byteArray, Base64.DEFAULT).replaceAll("[\\\\|\\n\\r]", "");
-//    }
+    private String drawableToBase64(Drawable drawable) {
+        Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(),
+                Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        drawable.draw(canvas);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
+        byte[] byteArray = baos.toByteArray();
+        return Base64.encodeToString(byteArray, Base64.DEFAULT);
+    }
 
     @Override
     public String getName() {
         return "ControllerModule";
     }
 
+    //
     @ReactMethod
-    public void findInstalledApps(Callback callback) {
+    public void searchApps(Callback callback) {
         if (sdkVersion >= Build.VERSION_CODES.R) {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.QUERY_ALL_PACKAGES) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(getCurrentActivity(), new String[]{Manifest.permission.QUERY_ALL_PACKAGES}, PERMISSION_REQUEST_CODE);
+            if (ContextCompat.checkSelfPermission(context,
+                    Manifest.permission.QUERY_ALL_PACKAGES) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(getCurrentActivity(),
+                        new String[] { Manifest.permission.QUERY_ALL_PACKAGES }, PERMISSION_REQUEST_CODE);
                 Log.d("ControllerModule", "Permission not granted");
             } else {
                 Log.d("ControllerModule", "Permission already");
@@ -91,17 +84,17 @@ public class ControllerModule extends ReactContextBaseJavaModule {
 
         JSONArray jsonArray = new JSONArray();
         for (ApplicationInfo appInfo : apps) {
-            //過濾系統及應用程式
+            // 過濾系統及應用程式
             JSONObject jsonObject = new JSONObject();
             try {
                 jsonObject.put("packageName", appInfo.packageName);
                 jsonObject.put("appName", packageManager.getApplicationLabel(appInfo).toString());
                 jsonObject.put("isSystem", appInfo.FLAG_SYSTEM);
-                // convert the appIcon to a base64 string or another suitable format before adding it to JSON
+                // convert the appIcon to a base64 string or another suitable format before
+                // adding it to JSON
                 Drawable drawableIcon = packageManager.getApplicationIcon(appInfo);
                 if (drawableIcon != null) {
-                    //Bitmap bitmap = drawableToBitmap(drawableIcon);
-                    //String base64Icon=bitmapToBase64(bitmap);
+                    String base64Icon = drawableToBase64(bitmap);
                     jsonObject.put("appIcon", drawableIcon);
                 }
 
@@ -121,38 +114,52 @@ public class ControllerModule extends ReactContextBaseJavaModule {
         callback.invoke(appListString);
     }
 
-    // @ReactMethod
-    // public void deleteApp(String packageName,Callback statusCallback) {
-    //     if (ContextCompat.checkSelfPermission(context, Manifest.permission.REQUEST_DELETE_PACKAGES) != PackageManager.PERMISSION_GRANTED) {
-    //         ActivityCompat.requestPermissions(getCurrentActivity(), new String[]{Manifest.permission.REQUEST_DELETE_PACKAGES}, PERMISSION_REQUEST_CODE);
-    //         Log.d("ControllerModule", "Permission not granted");
-    //     } else {
-    //         Log.d("ControllerModule", "Permission already");
+    @ReactMethod
+    public void installApp(String filePath, Callback callback) {
+        File file = File(filePath);
+        Uri apkUri = FileProvider.getUriForFile(reactContext, "${reactContext.packageName}.fileprovider",
+                File(filePath));
+        Log.d("INSTALL", apkUri.toString());
+        Intent intent = Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        reactContext.startActivity(intent);
+    }
 
-        //該方法為由clinet端進行刪除(會跳出對話框)
-//        try {
-//            Uri packageUri = Uri.parse("package:" + packageName);
-//            Intent intent = new Intent(Intent.ACTION_UNINSTALL_PACKAGE, packageUri);
-//            intent.putExtra(Intent.EXTRA_RETURN_RESULT, true);
-//            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // 添加此行以確保在非Activity上下文中啟動
-//            getReactApplicationContext().startActivity(intent, null);
-//            //回傳刪除成功訊息
-//            statusCallback.invoke("Delete Success");
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            //回傳刪除失敗訊息
-//            statusCallback.invoke("Delete Fail");
-//        }
-    //     try {
-    //         packageInstaller.uninstall(packageName, PendingIntent.getActivity(context.getApplicationContext(), 0, new Intent(), 0).getIntentSender());
-    //         statusCallback.invoke("Delete Success");
-    //         } catch (Exception e) {
-    //             Log.e("ControllerModule", "Delete Fail: " + e.getMessage());
-    //         }
-    //     }
-    // }
+    
+    @ReactMethod
+    public void deleteApp(String packageName, Callback statusCallback) {
+        if (ContextCompat.checkSelfPermission(context,
+                Manifest.permission.REQUEST_DELETE_PACKAGES) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(getCurrentActivity(),
+                    new String[] { Manifest.permission.REQUEST_DELETE_PACKAGES }, PERMISSION_REQUEST_CODE);
+            Log.d("ControllerModule", "Permission not granted");
+        } else {
+            Log.d("ControllerModule", "Permission already");
 
-//       @ReactMethod
-//       public void installApp(){}
-
+            // 該方法為由client端進行刪除(會跳出對話框)
+            try {
+                Uri packageUri = Uri.parse("package:" + packageName);
+                Intent intent = new Intent(Intent.ACTION_UNINSTALL_PACKAGE, packageUri);
+                intent.putExtra(Intent.EXTRA_RETURN_RESULT, true);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // 添加此行以確保在非Activity上下文中啟動
+                context.startActivity(intent, null);
+                // 回傳刪除成功訊息
+                statusCallback.invoke("Delete Success");
+            } catch (Exception e) {
+                e.printStackTrace();
+                // 回傳刪除失敗訊息
+                statusCallback.invoke("Delete Fail");
+            }
+            try {
+                packageInstaller.uninstall(packageName, PendingIntent
+                        .getActivity(context.getApplicationContext(), 0, new Intent(), 0).getIntentSender());
+                statusCallback.invoke("Delete Success");
+            } catch (Exception e) {
+                Log.e("ControllerModule", "Delete Fail: " + e.getMessage());
+            }
+        }
+    }
+   
 }
