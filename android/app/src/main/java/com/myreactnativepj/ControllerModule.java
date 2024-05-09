@@ -8,7 +8,6 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.Callback;
 
 import java.util.List;
-import java.io.ByteArrayOutputStream;
 
 import android.content.Context;
 import android.content.Intent;
@@ -18,11 +17,16 @@ import android.content.pm.PackageInstaller;
 import android.net.Uri;
 import android.app.PendingIntent;
 
-import android.graphics.Canvas;
+import androidx.core.content.FileProvider;
+import java.io.File;
+
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Bitmap.Config;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.BitmapDrawable;
+import android.util.Base64;
+import java.io.ByteArrayOutputStream;
+
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -35,18 +39,21 @@ import androidx.core.content.ContextCompat;
 import androidx.core.app.ActivityCompat;
 
 import android.util.Log;
-import android.util.Base64;
 
 public class ControllerModule extends ReactContextBaseJavaModule {
 
-    private static final int PERMISSION_REQUEST_CODE = 1; // 申請權限
-    private Context context = getReactApplicationContext();
-    private PackageManager packageManager = context.getPackageManager();
-    private PackageInstaller packageInstaller = packageManager.getPackageInstaller();
-    private int sdkVersion = Build.VERSION.SDK_INT;// 偵測SDK版本號
+    private static final int PERMISSION_REQUEST_CODE = 777;
+    private Context context;
+    private PackageManager packageManager;
+    private PackageInstaller packageInstaller;
+    private int sdkVersion; // 偵測SDK版本號
 
     ControllerModule(ReactApplicationContext context) {
         super(context);
+        this.context = context;
+        this.packageManager = context.getPackageManager();
+        this.packageInstaller = packageManager.getPackageInstaller();
+        this.sdkVersion = Build.VERSION.SDK_INT;
     }
 
     private String drawableToBase64(Drawable drawable) {
@@ -66,7 +73,6 @@ public class ControllerModule extends ReactContextBaseJavaModule {
         return "ControllerModule";
     }
 
-    //
     @ReactMethod
     public void searchApps(Callback callback) {
         if (sdkVersion >= Build.VERSION_CODES.R) {
@@ -94,7 +100,7 @@ public class ControllerModule extends ReactContextBaseJavaModule {
                 // adding it to JSON
                 Drawable drawableIcon = packageManager.getApplicationIcon(appInfo);
                 if (drawableIcon != null) {
-                    String base64Icon = drawableToBase64(bitmap);
+                    String base64Icon = drawableToBase64(drawableIcon);
                     jsonObject.put("appIcon", drawableIcon);
                 }
 
@@ -116,15 +122,15 @@ public class ControllerModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void installApp(String filePath, Callback callback) {
-        File file = File(filePath);
-        Uri apkUri = FileProvider.getUriForFile(reactContext, "${reactContext.packageName}.fileprovider",
-                File(filePath));
+        
+        File file = new File(filePath);
+        Uri apkUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileprovider", file);
         Log.d("INSTALL", apkUri.toString());
-        Intent intent = Intent(Intent.ACTION_VIEW);
+        Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        reactContext.startActivity(intent);
+        context.startActivity(intent);
     }
 
     

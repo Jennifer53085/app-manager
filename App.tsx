@@ -67,6 +67,7 @@ function App(): React.JSX.Element {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
   const handleQuery = () => {
+  console.log(ControllerModule)
     if (ControllerModule) {
     ControllerModule.searchApps((installedApps) => {
       console.log(installedApps);
@@ -87,13 +88,16 @@ function App(): React.JSX.Element {
     <SafeAreaView style={backgroundStyle}>
       {/* TEST Action button */}
       <Button
-        title="Press Me"
+        title="Search App"
         onPress={handleQuery}
       />
        <Button
-              title="Delete"
+              title="Delete App"
               onPress={handleDelete}
             />
+             <Button
+                          title="test"
+                        />
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
