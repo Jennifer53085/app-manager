@@ -18,9 +18,6 @@ import {
   Button,
   NativeModules
 } from 'react-native';
- const {ControllerModule} = 'NativeModules';
-
-
 import {
   Colors,
   DebugInstructions,
@@ -28,6 +25,8 @@ import {
   LearnMoreLinks,
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
+
+import  {handleSearchApps,handleDeleteApp} from './src/nativeModule.tsx';
 
 type SectionProps = PropsWithChildren<{
   title: string;
@@ -61,27 +60,11 @@ function Section({ children, title }: SectionProps): React.JSX.Element {
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
-  const { ControllerModule } = NativeModules;
+
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
-  const handleQuery = () => {
-  console.log(ControllerModule)
-    if (ControllerModule) {
-    ControllerModule.searchApps((installedApps) => {
-      console.log(installedApps);
-    });
-    }
-  }
-
-  const handleDelete = () => {
-      if (ControllerModule) {
-      ControllerModule.deleteApp("com.myreactnativepj",(app) => {
-       console.log(app);
-      });
-      }
-    }
 
 
   return (
@@ -89,15 +72,13 @@ function App(): React.JSX.Element {
       {/* TEST Action button */}
       <Button
         title="Search App"
-        onPress={handleQuery}
+        onPress={()=>handleSearchApps((applist)=>console.log(applist))}
       />
        <Button
-              title="Delete App"
-              onPress={handleDelete}
-            />
-             <Button
-                          title="test"
-                        />
+        title="Delete App"
+        onPress={handleDeleteApp}
+      />
+
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
